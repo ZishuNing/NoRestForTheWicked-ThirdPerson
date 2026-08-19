@@ -16,11 +16,11 @@
 
 ## 实现原理
 
-- 在内存中改写游戏自带的第三人称配置资产（灵敏度、跟随和平滑速度）
-- 通过补丁让移动输入跟随相机朝向
-- 相机撞墙时对位置做平滑（弹簧臂效果）
+- 在内存中改写游戏自带的 `ThirdPersonCameraConfig` 资产（鼠标灵敏度、直接输入、跟随/平滑速度）
+- 通过 Harmony postfix 挂钩 `QuantumLocalInputSource.UpdateRInputQuantumInput`，把移动输入方向按相机 yaw 旋转，使移动变为相机相对
+- 通过 `Camera.onPreCull` 回调对相机位置做 SmoothDamp，把游戏原本的瞬时碰撞回弹变成平滑的弹簧臂收缩
 
-所有改动仅作用于内存——不碰游戏文件和存档。
+所有改动仅作用于内存——不修改任何游戏文件和存档。
 
 ## 适配版本
 

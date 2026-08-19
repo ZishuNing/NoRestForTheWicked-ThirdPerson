@@ -16,11 +16,11 @@ A third-person camera mod for **No Rest for the Wicked**. Press **F9** to switch
 
 ## How it works
 
-- Rewrites the game's own third-person config asset in memory (sensitivity, follow and smoothing speeds)
-- Patches movement input to follow the camera yaw
-- SmoothDamps the camera position on wall collisions
+- Rewrites the game's own `ThirdPersonCameraConfig` asset in memory (mouse sensitivity, direct input, follow/smoothing speeds)
+- A Harmony postfix on `QuantumLocalInputSource.UpdateRInputQuantumInput` rotates the movement input direction by the camera yaw, so movement becomes camera-relative
+- A `Camera.onPreCull` callback SmoothDamps the camera position, turning the game's instant collision snap into a smooth spring-arm pull-in
 
-Everything is in-memory only — no game files or saves are touched.
+All changes are in-memory only — no game files or saves are touched.
 
 ## Compatibility
 
