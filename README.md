@@ -2,29 +2,25 @@
 
 [中文说明](README_CN.md)
 
-A third-person camera mod for **No Rest for the Wicked** (BepInEx IL2CPP plugin). Press **F9** to switch between the default top-down camera and a fully playable third-person camera.
+A third-person camera mod for **No Rest for the Wicked**. Press **F9** to switch between the default top-down camera and third-person.
 
 ![Demo](demo/demo.gif)
 
-## Background
-
-The game ships with a built-in but **unfinished** third-person mode. Out of the box it is barely playable: mouse sensitivity is 0 (camera won't turn), movement stays world-aligned (W always walks "north" no matter where you look), and the camera snaps violently at walls. This mod completes it.
-
 ## Features
 
-- **F9** toggles TopDown / ThirdPerson at any time
-- Working mouse look (horizontal + vertical sensitivity, direct input)
-- Camera-relative movement — W always walks toward where the camera faces
-- Spring-arm smoothing — no more jitter when the camera collides with walls
+- **F9** toggles top-down / third-person at any time
+- Working mouse look (horizontal + vertical sensitivity)
+- Camera-relative movement
+- Spring-arm smoothing — no more camera jitter at walls
 - All values configurable in `BepInEx/config/com.nrtw.thirdpersoncam.cfg`, applied live
 
 ## How it works
 
-- Rewrites the game's own `ThirdPersonCameraConfig` asset in memory (mouse sensitivity, direct input, follow/smoothing speeds)
-- A Harmony postfix on `QuantumLocalInputSource.UpdateRInputQuantumInput` rotates the movement input direction by the camera yaw, so movement becomes camera-relative
-- A `Camera.onPreCull` callback SmoothDamps the camera position, turning the game's instant collision snap into a smooth spring-arm pull-in
+- Rewrites the game's own third-person config asset in memory (sensitivity, follow and smoothing speeds)
+- Patches movement input to follow the camera yaw
+- SmoothDamps the camera position on wall collisions
 
-All changes are in-memory only — no game files or saves are touched.
+Everything is in-memory only — no game files or saves are touched.
 
 ## Compatibility
 
@@ -45,8 +41,8 @@ Other versions are untested. If a game update breaks the mod, please open an Iss
 ## Usage
 
 - **F9** switches between top-down and third-person.
-- In third-person: move the mouse to orbit the camera, WASD moves relative to the camera.
-- Tune sensitivity, follow speed and smoothing in `BepInEx/config/com.nrtw.thirdpersoncam.cfg` — changes apply immediately.
+- In third-person: move the mouse to orbit the camera, WASD moves relative to it.
+- Sensitivity, follow speed and smoothing live in `BepInEx/config/com.nrtw.thirdpersoncam.cfg` — changes apply immediately.
 
 ## Uninstall
 
