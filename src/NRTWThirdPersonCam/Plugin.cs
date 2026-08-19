@@ -25,10 +25,14 @@ namespace NRTWThirdPersonCam;
 //   - 撞墙回弹无平滑（v1.2 起由 onPreCull 弹簧臂平滑修复）
 //   - 移动输入方向基准恒为俯视世界方向，不随相机 yaw 旋转（v1.4 起由
 //     MovementDirectionPatch 修复，根因见 _camera_research/06_thirdperson_switches_and_fixes.md）
+// v1.1：修复切换世界后 F9 失效、移动输入退回世界坐标的问题——
+//   PlayerCamera.All 静态列表在切世界后残留已销毁的旧相机，原查找逻辑不检查存活，
+//   反复抓到同一个死对象，Update 在空分支提前 return，F9 永远轮询不到。
+//   现在查找时逐个过滤死对象，热键轮询也挪到不依赖相机状态的位置。
 // 本插件在游戏运行时改写 ThirdPersonCameraConfig（ScriptableObject 单例，仅改内存，
 // 不动游戏文件），并提供热键切换相机模式。所有数值可在
 // BepInEx/config/com.nrtw.thirdpersoncam.cfg 里调，即时生效。
-[BepInPlugin("com.nrtw.thirdpersoncam", "NRTW Third Person Camera Tweaks", "1.0.0")]
+[BepInPlugin("com.nrtw.thirdpersoncam", "NRTW Third Person Camera Tweaks", "1.1.0")]
 public class Plugin : BasePlugin
 {
     internal static new ManualLogSource Log;
@@ -155,6 +159,7 @@ public class CamWatcher : MonoBehaviour
     private float _nextSearch;
     private bool _applied;
     private bool _warnedNoPluginAsset;
+    private bool _hasCamera;
 
     // 相机位置平滑（弹簧臂）状态
     private Vector3 _smoothedCamPos;
@@ -235,22 +240,38 @@ public class CamWatcher : MonoBehaviour
 
     private void Update()
     {
-        // 节流查找玩家相机（场景切换/对象销毁后重新找；IL2CPP 下对已销毁对象的
-        // 访问会抛异常，故访问统一走 try/catch，出错即置空等下轮重找）
-        if (_cam == null)
+        // 热键轮询独立于相机状态，每帧都执行：切世界/相机重建期间按下也要响应，
+        // 否则相机查找陷入死循环时（见 FindAliveCamera 注释）F9 永远轮询不到。
+        bool toggle = false;
+        try { toggle = Input.GetKeyDown(Plugin.ToggleKey.Value); }
+        catch (Exception) { }
+
+        if (!IsAlive(_cam))
         {
-            _applied = false;
-            MovementDirectionPatch.Cam = null;
-            if (Time.unscaledTime < _nextSearch) return;
-            _nextSearch = Time.unscaledTime + 0.5f;
-            var all = PlayerCamera.All;
-            if (all != null && all.Count > 0) _cam = all[0];
-            if (_cam == null)
+            if (_hasCamera)
             {
-                var found = Resources.FindObjectsOfTypeAll<PlayerCamera>();
-                if (found != null && found.Length > 0) _cam = found[0];
+                _hasCamera = false;
+                Plugin.Log.LogInfo("[NRTW3P] camera lost (world switch / destroyed), re-searching...");
             }
-            MovementDirectionPatch.Cam = _cam;
+            _cam = null;
+            MovementDirectionPatch.Cam = null;
+            _applied = false;
+            _hasSmoothedPos = false;
+
+            if (Time.unscaledTime >= _nextSearch)
+            {
+                _nextSearch = Time.unscaledTime + 0.5f;
+                _cam = FindAliveCamera();
+                if (_cam != null)
+                {
+                    _hasCamera = true;
+                    MovementDirectionPatch.Cam = _cam;
+                    try { Plugin.Log.LogInfo($"[NRTW3P] camera acquired: {_cam.name} mode={_cam.Mode}"); }
+                    catch (Exception) { }
+                }
+            }
+            if (toggle)
+                Plugin.Log.LogWarning("[NRTW3P] toggle key pressed but no alive camera yet; ignored");
             return;
         }
 
@@ -258,13 +279,59 @@ public class CamWatcher : MonoBehaviour
         {
             if (Plugin.EnableTweaks.Value) ApplyTweaks();
             if (_cam.Mode == PlayerCameraMode.ThirdPerson) EnsureRotationRangeRelaxed();
-            if (Input.GetKeyDown(Plugin.ToggleKey.Value)) ToggleMode();
+            if (toggle) ToggleMode();
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Plugin.Log.LogWarning("[NRTW3P] camera access failed, will re-search: " + e.Message);
             _cam = null; // 相机对象可能已销毁，下帧重新查找
             MovementDirectionPatch.Cam = null;
         }
+    }
+
+    // Unity 生命周期检查：已销毁的原生对象在 fake-null 语义下 == null 为 true；
+    // 某些状态下 fake-null 失效，再补一次 gameObject 访问（销毁时会抛异常）。
+    private static bool IsAlive(PlayerCamera c)
+    {
+        if (c == null) return false;
+        try { return c.gameObject != null; }
+        catch (Exception) { return false; }
+    }
+
+    // 查找当前存活的玩家相机。
+    // 注意：PlayerCamera.All 是游戏维护的静态列表，切世界后可能残留已销毁的旧相机；
+    // 不检查存活就会反复抓到同一个死对象，Update 每帧在空分支提前 return，
+    // 表现为 F9 失灵、移动输入退回世界坐标（v1.0 的切世界 bug 根因）。
+    private static PlayerCamera FindAliveCamera()
+    {
+        try
+        {
+            var all = PlayerCamera.All;
+            if (all != null)
+            {
+                for (int i = 0; i < all.Count; i++)
+                {
+                    var c = all[i];
+                    if (IsAlive(c)) return c;
+                }
+            }
+        }
+        catch (Exception) { }
+
+        try
+        {
+            var found = Resources.FindObjectsOfTypeAll<PlayerCamera>();
+            if (found != null)
+            {
+                foreach (var c in found)
+                {
+                    if (IsAlive(c) && c.gameObject.activeInHierarchy) return c;
+                }
+            }
+        }
+        catch (Exception) { }
+
+        return null;
     }
 
     private void ApplyTweaks()
