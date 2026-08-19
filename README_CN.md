@@ -38,12 +38,6 @@
 2. 从 [Releases](../../releases) 下载 `NRTWThirdPersonCam.zip`，解压到 `BepInEx\plugins\`。
 3. 启动游戏，读取存档后按 **F9**。
 
-## 使用
-
-- **F9** 在俯视角和第三人称之间切换。
-- 第三人称下：移动鼠标环绕视角，WASD 相对相机方向移动。
-- 灵敏度、跟随速度、平滑等参数在 `BepInEx/config/com.nrtw.thirdpersoncam.cfg` 调整，即时生效。
-
 ## 卸载
 
 删除 `BepInEx\plugins\NRTWThirdPersonCam\`。完全卸载 BepInEx：删除游戏根目录下的 `winhttp.dll`、`doorstop_config.ini`、`dotnet\`、`BepInEx\`。
