@@ -38,12 +38,6 @@ Other versions are untested. If a game update breaks the mod, please open an Iss
 2. Download `NRTWThirdPersonCam.zip` from [Releases](../../releases) and extract it into `BepInEx\plugins\`.
 3. Launch the game, load a save, press **F9**.
 
-## Usage
-
-- **F9** switches between top-down and third-person.
-- In third-person: move the mouse to orbit the camera, WASD moves relative to it.
-- Sensitivity, follow speed and smoothing live in `BepInEx/config/com.nrtw.thirdpersoncam.cfg` — changes apply immediately.
-
 ## Uninstall
 
 Delete `BepInEx\plugins\NRTWThirdPersonCam\`. To remove BepInEx entirely, delete `winhttp.dll`, `doorstop_config.ini`, `dotnet\`, and `BepInEx\` from the game root.
